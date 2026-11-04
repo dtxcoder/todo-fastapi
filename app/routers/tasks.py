@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Path, status, Depends, HTTPException
+from fastapi import APIRouter, Path, status, Depends, HTTPException, Query
 from typing import Annotated
 from app.models.models import Task
 from sqlalchemy.orm import Session
 from app.database import get_session
 from app.schemas.task_schemas import TaskCreate, TaskResponse, TaskUpdate
+from sqlalchemy import select
 
 
 router = APIRouter(
@@ -14,11 +15,15 @@ router = APIRouter(
 SessionDep = Annotated[Session, Depends(get_session)]
 
 @router.get("/", response_model=list[TaskResponse])
-def get_tasks(session: SessionDep, finished: bool | None = None):
+def get_tasks(session: SessionDep, finished: bool | None = None, limit: int = Query(ge=1, default=10, le=100), offset: int = Query(ge=0, default=0)):
+    stmt = select(Task).order_by(Task.id)
+    
     if finished is not None:
-        tasks = session.query(Task).filter(Task.finished == finished).all()
-    else:
-        tasks = session.query(Task).all()
+        stmt = stmt.where(Task.finished == finished)
+
+    stmt = stmt.limit(limit).offset(offset)
+
+    tasks = session.scalars(stmt).all()
 
     return [
         TaskResponse(
