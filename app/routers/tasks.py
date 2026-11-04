@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Path, status, Depends, HTTPException, Response
+from fastapi import APIRouter, Path, status, Depends, HTTPException
 from typing import Annotated
 from app.models.models import Task
 from sqlalchemy.orm import Session
@@ -14,8 +14,11 @@ router = APIRouter(
 SessionDep = Annotated[Session, Depends(get_session)]
 
 @router.get("/", response_model=list[TaskResponse])
-def get_tasks(session: SessionDep):
-    tasks = session.query(Task).all()
+def get_tasks(session: SessionDep, finished: bool | None = None):
+    if finished is not None:
+        tasks = session.query(Task).filter(Task.finished == finished).all()
+    else:
+        tasks = session.query(Task).all()
 
     return [
         TaskResponse(
