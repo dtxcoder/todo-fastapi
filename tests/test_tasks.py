@@ -213,3 +213,113 @@ def test_delete_task(client):
 def test_delete_missing_task(client):
     delete_response = client.delete("/tasks/999999")
     assert delete_response.status_code == 404
+
+def create_task(client, task_name: str, finished: bool = False):
+    response = client.post(
+        "/tasks/",
+        json={"task_name": task_name, "finished": finished},
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_get_tasks_with_default_pagination(client):
+    for i in range(15):
+        create_task(client, f"Task {i}")
+
+    response = client.get("/tasks/")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 10
+
+
+def test_get_tasks_with_limit(client):
+    for i in range(5):
+        create_task(client, f"Task {i}")
+
+    response = client.get("/tasks/?limit=3")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+
+
+def test_get_tasks_with_offset(client):
+    created_tasks = [
+        create_task(client, f"Task {i}")
+        for i in range(5)
+    ]
+
+    response = client.get("/tasks/?offset=2")
+
+    assert response.status_code == 200
+    assert [task["id"] for task in response.json()] == [
+        task["id"] for task in created_tasks[2:]
+    ]
+
+
+def test_get_tasks_with_limit_and_offset(client):
+    created_tasks = [
+        create_task(client, f"Task {i}")
+        for i in range(10)
+    ]
+
+    response = client.get("/tasks/?limit=3&offset=4")
+
+    assert response.status_code == 200
+    assert [task["id"] for task in response.json()] == [
+        task["id"] for task in created_tasks[4:7]
+    ]
+
+
+def test_get_tasks_with_offset_beyond_available_records(client):
+    for i in range(3):
+        create_task(client, f"Task {i}")
+
+    response = client.get("/tasks/?offset=10")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_get_tasks_with_limit_equal_to_one(client):
+    for i in range(3):
+        create_task(client, f"Task {i}")
+
+    response = client.get("/tasks/?limit=1")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+def test_get_tasks_with_zero_limit(client):
+    response = client.get("/tasks/?limit=0")
+
+    assert response.status_code == 422
+
+
+def test_get_tasks_with_negative_limit(client):
+    response = client.get("/tasks/?limit=-1")
+
+    assert response.status_code == 422
+
+
+def test_get_tasks_with_negative_offset(client):
+    response = client.get("/tasks/?offset=-1")
+
+    assert response.status_code == 422
+
+
+def test_get_tasks_with_maximum_limit(client):
+    for i in range(100):
+        create_task(client, f"Task {i}")
+
+    response = client.get("/tasks/?limit=100")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 100
+
+
+def test_get_tasks_with_limit_above_maximum(client):
+    response = client.get("/tasks/?limit=101")
+
+    assert response.status_code == 422
