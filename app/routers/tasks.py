@@ -17,7 +17,19 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 @router.get("/", response_model=list[TaskResponse])
 def get_tasks(session: SessionDep, filter_query: Annotated[FilterParams, Query()]):
-    stmt = select(Task).order_by(Task.id)
+    stmt = select(Task)
+    sort_columns = {
+        "id": Task.id,
+        "finished": Task.finished,
+        "task_name": Task.task_name
+        }
+
+    sort_column = sort_columns[filter_query.sort_by]
+
+    if filter_query.order == "asc":
+        stmt = stmt.order_by(sort_column.asc())
+    else:
+        stmt = stmt.order_by(sort_column.desc())
     
     if filter_query.finished is not None:
         stmt = stmt.where(Task.finished == filter_query.finished)
