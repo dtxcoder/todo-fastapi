@@ -34,6 +34,9 @@ def get_tasks(session: SessionDep, filter_query: Annotated[FilterParams, Query()
     if filter_query.finished is not None:
         stmt = stmt.where(Task.finished == filter_query.finished)
 
+    if filter_query.search is not None:
+        stmt = stmt.where(Task.task_name.ilike(f"%{filter_query.search}%"))
+
     stmt = stmt.limit(filter_query.limit).offset(filter_query.offset)
 
     tasks = session.scalars(stmt).all()

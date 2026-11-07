@@ -7,3 +7,4 @@ class FilterParams(BaseModel):
     offset: int = Field(ge=0, default=0)
     sort_by: Literal["id", "finished", "task_name"] = "id"
     order: Literal["asc", "desc"] = "asc"
+    search: str | None = None
